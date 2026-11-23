@@ -1,0 +1,168 @@
+<main class="container py-4 py-lg-5">
+  <header class="page-header mb-4">
+    <div>
+      <span class="eyebrow">CLÍNICA LÁSER</span>
+      <h1 class="display-6 fw-bold mb-1">Agenda de citas</h1>
+      <p class="text-secondary mb-0">Organiza sesiones de 30 minutos de forma rápida y segura.</p>
+    </div>
+  </header>
+
+  <section class="card filter-card border-0 shadow-sm mb-4">
+    <div class="card-body p-3 p-lg-4">
+      <form class="row g-3 align-items-end" [formGroup]="filtro" (ngSubmit)="cargar()">
+        <div class="col-lg-5">
+          <label class="form-label fw-semibold" for="cubiculo">Cubículo</label>
+          <select id="cubiculo" class="form-select form-select-lg" formControlName="cubiculoId">
+            @for (cubiculo of cubiculos(); track cubiculo.id) {
+              <option [ngValue]="cubiculo.id">{{ cubiculo.sede }} · {{ cubiculo.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-7 col-lg-4">
+          <label class="form-label fw-semibold" for="fecha">Fecha</label>
+          <input id="fecha" type="date" class="form-control form-control-lg" formControlName="fecha" [min]="hoy">
+        </div>
+        <div class="col-md-5 col-lg-3">
+          <button class="btn btn-primary btn-lg w-100" type="submit" [disabled]="cargando() || filtro.invalid">
+            @if (cargando()) { Consultando… } @else { Actualizar agenda }
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  @if (error()) {
+    <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+      <span aria-hidden="true">!</span><span>{{ error() }}</span>
+    </div>
+  }
+  @if (mensaje()) {
+    <div class="alert alert-success d-flex align-items-center gap-2" role="status">
+      <span aria-hidden="true">✓</span><span>{{ mensaje() }}</span>
+    </div>
+  }
+
+  <section class="row g-3 mb-4" aria-label="Resumen del día">
+    <div class="col-4"><div class="metric-card"><strong>{{ resumen().disponibles }}</strong><span>Disponibles</span></div></div>
+    <div class="col-4"><div class="metric-card metric-active"><strong>{{ resumen().activas }}</strong><span>Programadas</span></div></div>
+    <div class="col-4"><div class="metric-card metric-muted"><strong>{{ resumen().canceladas }}</strong><span>Canceladas</span></div></div>
+  </section>
+
+  <div class="row g-4 align-items-start">
+    <section class="col-lg-7">
+      <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card-header agenda-header border-0 d-flex justify-content-between align-items-center">
+          <div><h2 class="h5 mb-1">Horario del día</h2><span class="small text-secondary">Selecciona un bloque disponible</span></div>
+          <span class="status-legend"><i></i> Disponible</span>
+        </div>
+        <div class="list-group list-group-flush agenda">
+          @if (cargando()) {
+            <div class="p-5 text-center text-secondary"><div class="spinner-border spinner-border-sm me-2" aria-hidden="true"></div>Consultando horarios…</div>
+          } @else {
+            @for (bloque of bloques(); track bloque.hora) {
+              <div class="slot" [class.slot-selected]="!bloque.cita && formulario.controls.hora.value === bloque.hora"
+                   [class.slot-busy]="bloque.cita && bloque.cita.estado !== 'CANCELADA'">
+                <time class="slot-time">{{ bloque.hora }}</time>
+                @if (bloque.cita; as cita) {
+                  <div class="slot-content"><strong>{{ cita.pacienteNombre }}</strong><span class="small text-secondary">Sesión de 30 minutos</span></div>
+                  <span class="badge rounded-pill" [class.text-bg-secondary]="cita.estado === 'CANCELADA'"
+                        [class.text-bg-primary]="cita.estado !== 'CANCELADA'">{{ cita.estado }}</span>
+                  @if (cita.estado === 'PROGRAMADA') {
+                    @if (citaACancelarId() === cita.id) {
+                      <div class="cancel-confirm" aria-label="Confirmar cancelación">
+                        <span>¿Cancelar?</span>
+                        <button class="btn btn-sm btn-danger" type="button" (click)="cancelarCita(cita.id)"
+                                [disabled]="cancelandoId() === cita.id">
+                          @if (cancelandoId() === cita.id) { Cancelando… } @else { Sí }
+                        </button>
+                        <button class="btn btn-sm btn-light" type="button" (click)="descartarCancelacion()"
+                                [disabled]="cancelandoId() === cita.id">No</button>
+                      </div>
+                    } @else {
+                      <button class="btn-cancel" type="button" (click)="solicitarCancelacion(cita.id)">Cancelar</button>
+                    }
+                  }
+                } @else {
+                  <button class="slot-button" type="button" (click)="seleccionarHora(bloque.hora)"
+                          [attr.aria-label]="'Seleccionar horario ' + bloque.hora">
+                    <span>Disponible</span><span aria-hidden="true">Seleccionar</span>
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
+
+    <aside class="col-lg-5 sticky-lg-top appointment-panel">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <span class="eyebrow">NUEVA SESIÓN</span>
+          <h2 class="h4 mb-1">Registrar cita</h2>
+          <p class="text-secondary small mb-4">El cubículo y la fecha se toman de la agenda seleccionada.</p>
+          <form [formGroup]="formulario" (ngSubmit)="registrar()">
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="paciente">Paciente</label>
+              <select id="paciente" class="form-select" formControlName="pacienteId">
+                <option [ngValue]="0">Selecciona un paciente</option>
+                @for (paciente of pacientes(); track paciente.id) {
+                  <option [ngValue]="paciente.id">{{ paciente.nombres }} · {{ paciente.dni }}</option>
+                }
+              </select>
+              @if (formulario.controls.pacienteId.touched && formulario.controls.pacienteId.invalid) {
+                <div class="invalid-message">Selecciona un paciente.</div>
+              }
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="hora">Hora</label>
+              <input id="hora" type="time" class="form-control" formControlName="hora" min="08:00" max="17:30" step="1800">
+              <div class="form-text">También puedes elegirla directamente en la agenda.</div>
+              @if (formulario.controls.hora.touched && formulario.controls.hora.invalid) {
+                <div class="invalid-message">Selecciona una hora.</div>
+              }
+            </div>
+            <button class="btn btn-success btn-lg w-100" type="submit"
+                    [disabled]="guardandoCita() || formulario.invalid || filtro.invalid">
+              @if (guardandoCita()) { Registrando… } @else { Confirmar cita }
+            </button>
+          </form>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <details class="catalog-card mt-4">
+    <summary>
+      <span><strong>Creación rápida</strong><small>Agrega pacientes o cubículos sin salir de la agenda</small></span>
+      <span class="summary-action">Administrar</span>
+    </summary>
+    <div class="catalog-body">
+      <div class="row g-4">
+        <form class="col-md-6" [formGroup]="pacienteForm" (ngSubmit)="crearPaciente()">
+          <h2 class="h6 mb-3">Nuevo paciente</h2>
+          <div class="mb-3"><label class="form-label" for="nuevo-nombres">Nombres completos</label><input id="nuevo-nombres" class="form-control" formControlName="nombres" maxlength="100" placeholder="Ej. María López"></div>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="nuevo-dni">DNI</label><input id="nuevo-dni" class="form-control" formControlName="dni" maxlength="8" inputmode="numeric" placeholder="8 dígitos">
+              @if (pacienteForm.controls.dni.touched && pacienteForm.controls.dni.invalid) { <div class="invalid-message">Ingresa exactamente 8 dígitos.</div> }
+            </div>
+            <div class="col-sm-6"><label class="form-label" for="nuevo-telefono">Teléfono</label><input id="nuevo-telefono" class="form-control" formControlName="telefono" maxlength="15" placeholder="Opcional"></div>
+          </div>
+          <button class="btn btn-outline-primary" type="submit" [disabled]="guardandoPaciente() || pacienteForm.invalid">
+            @if (guardandoPaciente()) { Creando… } @else { Crear paciente }
+          </button>
+        </form>
+
+        <form class="col-md-6 catalog-divider" [formGroup]="cubiculoForm" (ngSubmit)="crearCubiculo()">
+          <h2 class="h6 mb-3">Nuevo cubículo</h2>
+          <div class="mb-3"><label class="form-label" for="nuevo-cubiculo">Nombre</label><input id="nuevo-cubiculo" class="form-control" formControlName="nombre" maxlength="50" placeholder="Ej. Cubículo 2"></div>
+          <div class="mb-3"><label class="form-label" for="nueva-sede">Sede</label><input id="nueva-sede" class="form-control" formControlName="sede" maxlength="50" placeholder="Ej. Miraflores"></div>
+          <button class="btn btn-outline-primary" type="submit" [disabled]="guardandoCubiculo() || cubiculoForm.invalid">
+            @if (guardandoCubiculo()) { Creando… } @else { Crear cubículo }
+          </button>
+        </form>
+      </div>
+    </div>
+  </details>
+</main>

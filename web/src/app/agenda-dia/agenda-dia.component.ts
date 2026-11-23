@@ -23,6 +23,8 @@ export class AgendaDiaComponent implements OnInit {
   readonly guardandoCita = signal(false);
   readonly guardandoPaciente = signal(false);
   readonly guardandoCubiculo = signal(false);
+  readonly citaACancelarId = signal<number | null>(null);
+  readonly cancelandoId = signal<number | null>(null);
   readonly mensaje = signal('');
   readonly error = signal('');
 
@@ -129,6 +131,32 @@ export class AgendaDiaComponent implements OnInit {
     this.formulario.controls.hora.setValue(hora);
     this.mensaje.set(`Horario ${hora} seleccionado.`);
     this.error.set('');
+  }
+
+  solicitarCancelacion(id: number): void {
+    this.citaACancelarId.set(id);
+    this.mensaje.set('');
+    this.error.set('');
+  }
+
+  descartarCancelacion(): void {
+    this.citaACancelarId.set(null);
+  }
+
+  cancelarCita(id: number): void {
+    this.cancelandoId.set(id);
+    this.api.cancelar(id).subscribe({
+      next: () => {
+        this.cancelandoId.set(null);
+        this.citaACancelarId.set(null);
+        this.mensaje.set('Cita cancelada. El horario vuelve a estar disponible.');
+        this.cargar();
+      },
+      error: error => {
+        this.cancelandoId.set(null);
+        this.mostrarError(error);
+      }
+    });
   }
 
   crearPaciente(): void {
