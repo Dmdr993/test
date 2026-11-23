@@ -20,6 +20,9 @@ export class AgendaDiaComponent implements OnInit {
   readonly pacientes = signal<Paciente[]>([]);
   readonly cubiculos = signal<Cubiculo[]>([]);
   readonly cargando = signal(false);
+  readonly guardandoCita = signal(false);
+  readonly guardandoPaciente = signal(false);
+  readonly guardandoCubiculo = signal(false);
   readonly mensaje = signal('');
   readonly error = signal('');
 
@@ -53,6 +56,12 @@ export class AgendaDiaComponent implements OnInit {
       resultado.push({ hora, cita });
     }
     return resultado;
+  });
+
+  readonly resumen = computed(() => {
+    const activas = this.citas().filter(cita => cita.estado !== 'CANCELADA').length;
+    const canceladas = this.citas().filter(cita => cita.estado === 'CANCELADA').length;
+    return { activas, canceladas, disponibles: 20 - activas };
   });
 
   constructor(private readonly fb: FormBuilder, private readonly api: CitaService) {}
@@ -100,18 +109,26 @@ export class AgendaDiaComponent implements OnInit {
       this.error.set('La fecha y hora deben ser futuras.');
       return;
     }
+    this.guardandoCita.set(true);
     this.api.registrar({
       pacienteId: form.pacienteId,
       cubiculoId: filtro.cubiculoId,
       fechaHoraInicio
     }).subscribe({
       next: () => {
+        this.guardandoCita.set(false);
         this.mensaje.set('Cita registrada correctamente.');
         this.formulario.reset({ pacienteId: 0, hora: '' });
         this.cargar();
       },
-      error: error => this.mostrarError(error)
+      error: error => { this.guardandoCita.set(false); this.mostrarError(error); }
     });
+  }
+
+  seleccionarHora(hora: string): void {
+    this.formulario.controls.hora.setValue(hora);
+    this.mensaje.set(`Horario ${hora} seleccionado.`);
+    this.error.set('');
   }
 
   crearPaciente(): void {
@@ -122,14 +139,16 @@ export class AgendaDiaComponent implements OnInit {
       return;
     }
     const form = this.pacienteForm.getRawValue();
+    this.guardandoPaciente.set(true);
     this.api.crearPaciente({ ...form, telefono: form.telefono || null }).subscribe({
       next: paciente => {
+        this.guardandoPaciente.set(false);
         this.pacientes.update(items => [...items, paciente].sort((a, b) => a.nombres.localeCompare(b.nombres)));
         this.formulario.controls.pacienteId.setValue(paciente.id);
         this.pacienteForm.reset({ nombres: '', dni: '', telefono: '' });
         this.mensaje.set('Paciente creado correctamente.');
       },
-      error: error => this.mostrarError(error)
+      error: error => { this.guardandoPaciente.set(false); this.mostrarError(error); }
     });
   }
 
@@ -140,15 +159,17 @@ export class AgendaDiaComponent implements OnInit {
       this.cubiculoForm.markAllAsTouched();
       return;
     }
+    this.guardandoCubiculo.set(true);
     this.api.crearCubiculo(this.cubiculoForm.getRawValue()).subscribe({
       next: cubiculo => {
+        this.guardandoCubiculo.set(false);
         this.cubiculos.update(items => [...items, cubiculo]);
         this.filtro.controls.cubiculoId.setValue(cubiculo.id);
         this.cubiculoForm.reset({ nombre: '', sede: '' });
         this.mensaje.set('Cubículo creado correctamente.');
         this.cargar();
       },
-      error: error => this.mostrarError(error)
+      error: error => { this.guardandoCubiculo.set(false); this.mostrarError(error); }
     });
   }
 
