@@ -21,8 +21,8 @@ public sealed class CitaService(ICitaRepository repository, TimeProvider clock) 
 
     public async Task<CitaDto> RegistrarAsync(CrearCitaDto dto)
     {
-        var ahoraLocal = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
-            clock.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")).DateTime;
+        var zonaLima = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+        var ahoraLocal = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zonaLima).DateTime;
         if (dto.FechaHoraInicio <= ahoraLocal)
             throw new ValidationException("La fecha y hora deben ser futuras.");
         if (!await repository.PacienteExisteAsync(dto.PacienteId))

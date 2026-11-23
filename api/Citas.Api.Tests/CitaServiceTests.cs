@@ -2,6 +2,7 @@ using Citas.Api.Data;
 using Citas.Api.Infrastructure;
 using Citas.Api.Models;
 using Citas.Api.Services;
+using Xunit;
 
 namespace Citas.Api.Tests;
 
@@ -36,6 +37,13 @@ public sealed class CitaServiceTests
         Assert.Equal("PROGRAMADA", result.Estado);
     }
 
+    [Fact]
+    public async Task Cancelar_devuelve_falso_si_no_existe()
+    {
+        var service = new CitaService(new FakeRepository(), new FixedClock(Now));
+        Assert.False(await service.CancelarAsync(99));
+    }
+
     private sealed class FixedClock(DateTimeOffset value) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => value;
@@ -57,6 +65,10 @@ public sealed class CitaServiceTests
             Task.FromResult<IReadOnlyList<PacienteDto>>([]);
         public Task<IReadOnlyList<CubiculoDto>> ListarCubiculosAsync() =>
             Task.FromResult<IReadOnlyList<CubiculoDto>>([]);
+        public Task<PacienteDto> CrearPacienteAsync(CrearPacienteDto dto) =>
+            Task.FromResult(new PacienteDto(1, dto.Nombres, dto.Dni));
+        public Task<CubiculoDto> CrearCubiculoAsync(CrearCubiculoDto dto) =>
+            Task.FromResult(new CubiculoDto(1, dto.Nombre, dto.Sede));
     }
 }
 

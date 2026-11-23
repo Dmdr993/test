@@ -14,6 +14,8 @@ public interface ICitaRepository
     Task<bool> CancelarAsync(int id);
     Task<IReadOnlyList<PacienteDto>> ListarPacientesAsync();
     Task<IReadOnlyList<CubiculoDto>> ListarCubiculosAsync();
+    Task<PacienteDto> CrearPacienteAsync(CrearPacienteDto dto);
+    Task<CubiculoDto> CrearCubiculoAsync(CrearCubiculoDto dto);
 }
 
 public sealed class SqlCitaRepository(IConfiguration configuration) : ICitaRepository
@@ -84,6 +86,28 @@ public sealed class SqlCitaRepository(IConfiguration configuration) : ICitaRepos
         await using var connection = CrearConexion();
         return (await connection.QueryAsync<CubiculoDto>(
             "SELECT Id, Nombre, Sede FROM dbo.Cubiculo ORDER BY Sede, Nombre")).AsList();
+    }
+
+    public async Task<PacienteDto> CrearPacienteAsync(CrearPacienteDto dto)
+    {
+        const string sql = """
+            INSERT dbo.Paciente (Nombres, Dni, Telefono)
+            OUTPUT INSERTED.Id, INSERTED.Nombres, INSERTED.Dni
+            VALUES (@Nombres, @Dni, @Telefono);
+            """;
+        await using var connection = CrearConexion();
+        return await connection.QuerySingleAsync<PacienteDto>(sql, dto);
+    }
+
+    public async Task<CubiculoDto> CrearCubiculoAsync(CrearCubiculoDto dto)
+    {
+        const string sql = """
+            INSERT dbo.Cubiculo (Nombre, Sede)
+            OUTPUT INSERTED.Id, INSERTED.Nombre, INSERTED.Sede
+            VALUES (@Nombre, @Sede);
+            """;
+        await using var connection = CrearConexion();
+        return await connection.QuerySingleAsync<CubiculoDto>(sql, dto);
     }
 }
 

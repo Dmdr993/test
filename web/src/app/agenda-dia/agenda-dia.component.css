@@ -1,0 +1,4 @@
+.agenda { max-height: 650px; overflow-y: auto; }
+.hora { width: 4rem; }
+.list-group-item { min-height: 54px; }
+

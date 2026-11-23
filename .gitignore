@@ -6,4 +6,5 @@
 .vscode/
 *.user
 *.suo
+*.log
 

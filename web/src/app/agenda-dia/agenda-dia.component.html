@@ -1,0 +1,128 @@
+<main class="container py-4">
+  <h1 class="h3 mb-4">Agenda de citas</h1>
+
+  <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <form class="row g-3 align-items-end" [formGroup]="filtro" (ngSubmit)="cargar()">
+        <div class="col-md-5">
+          <label class="form-label" for="cubiculo">Cubículo</label>
+          <select id="cubiculo" class="form-select" formControlName="cubiculoId">
+            @for (cubiculo of cubiculos(); track cubiculo.id) {
+              <option [ngValue]="cubiculo.id">{{ cubiculo.sede }} — {{ cubiculo.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="fecha">Fecha</label>
+          <input id="fecha" type="date" class="form-control" formControlName="fecha" [min]="hoy">
+        </div>
+        <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Ver agenda</button></div>
+      </form>
+    </div>
+  </section>
+
+  @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
+  @if (mensaje()) { <div class="alert alert-success" role="status">{{ mensaje() }}</div> }
+
+  <div class="row g-4">
+    <section class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Horario del día</div>
+        <div class="list-group list-group-flush agenda">
+          @if (cargando()) {
+            <div class="p-4 text-center">Cargando…</div>
+          } @else {
+            @for (bloque of bloques(); track bloque.hora) {
+              <div class="list-group-item d-flex gap-3 align-items-center">
+                <time class="hora fw-semibold">{{ bloque.hora }}</time>
+                @if (bloque.cita; as cita) {
+                  <div class="flex-grow-1">
+                    <span>{{ cita.pacienteNombre }}</span>
+                    <span class="badge ms-2" [class.text-bg-secondary]="cita.estado === 'CANCELADA'"
+                          [class.text-bg-primary]="cita.estado !== 'CANCELADA'">{{ cita.estado }}</span>
+                  </div>
+                } @else {
+                  <span class="text-success">Disponible</span>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Registrar cita</div>
+        <div class="card-body">
+          <form [formGroup]="formulario" (ngSubmit)="registrar()">
+            <div class="mb-3">
+              <label class="form-label" for="paciente">Paciente</label>
+              <select id="paciente" class="form-select" formControlName="pacienteId">
+                <option [ngValue]="0">Seleccione</option>
+                @for (paciente of pacientes(); track paciente.id) {
+                  <option [ngValue]="paciente.id">{{ paciente.nombres }} — {{ paciente.dni }}</option>
+                }
+              </select>
+              @if (formulario.controls.pacienteId.touched && formulario.controls.pacienteId.invalid) {
+                <div class="text-danger small mt-1">Seleccione un paciente.</div>
+              }
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="hora">Hora</label>
+              <input id="hora" type="time" class="form-control" formControlName="hora"
+                     min="08:00" max="17:30" step="1800">
+              @if (formulario.controls.hora.touched && formulario.controls.hora.invalid) {
+                <div class="text-danger small mt-1">Seleccione una hora.</div>
+              }
+            </div>
+            <button class="btn btn-success w-100" type="submit">Registrar cita</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card shadow-sm mt-4">
+    <div class="card-header fw-semibold">Creación de catálogos</div>
+    <div class="card-body">
+      <div class="row g-4">
+        <form class="col-md-6" [formGroup]="pacienteForm" (ngSubmit)="crearPaciente()">
+          <h2 class="h6">Nuevo paciente</h2>
+          <div class="mb-2">
+            <label class="form-label" for="nuevo-nombres">Nombres</label>
+            <input id="nuevo-nombres" class="form-control" formControlName="nombres" maxlength="100">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="nuevo-dni">DNI</label>
+              <input id="nuevo-dni" class="form-control" formControlName="dni" maxlength="8" inputmode="numeric">
+              @if (pacienteForm.controls.dni.touched && pacienteForm.controls.dni.invalid) {
+                <div class="text-danger small mt-1">Ingrese exactamente 8 dígitos.</div>
+              }
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="nuevo-telefono">Teléfono</label>
+              <input id="nuevo-telefono" class="form-control" formControlName="telefono" maxlength="15">
+            </div>
+          </div>
+          <button class="btn btn-outline-primary" type="submit">Crear paciente</button>
+        </form>
+
+        <form class="col-md-6 border-md-start" [formGroup]="cubiculoForm" (ngSubmit)="crearCubiculo()">
+          <h2 class="h6">Nuevo cubículo</h2>
+          <div class="mb-2">
+            <label class="form-label" for="nuevo-cubiculo">Nombre</label>
+            <input id="nuevo-cubiculo" class="form-control" formControlName="nombre" maxlength="50">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="nueva-sede">Sede</label>
+            <input id="nueva-sede" class="form-control" formControlName="sede" maxlength="50">
+          </div>
+          <button class="btn btn-outline-primary" type="submit">Crear cubículo</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
